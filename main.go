@@ -20,12 +20,18 @@ func formatAsDate(t time.Time) string {
 
 func main() {
 	r := gee.New()
-	r.Use(gee.Logger())
+	r.Use(gee.Logger(), gee.Recovery()) // 默认使用日志中间件和错误恢复
 	r.SetFuncMap(template.FuncMap{
 		"formatAsDate": formatAsDate,
 	})
 	r.LoadHTMLGlob("templates/*")
 	r.Static("/assets", "./static")
+
+	// 数组越界错误：用于测试 Recovery()
+	r.GET("/panic", func(c *gee.Context) {
+		names := []string{"geek"}
+		c.String(http.StatusOK, names[100])
+	})
 
 	api := r.Group("/api")
 	{
