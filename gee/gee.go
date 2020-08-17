@@ -1,8 +1,10 @@
 package gee
 
 import (
+	"html/template"
 	"log"
 	"net/http"
+	"path"
 	"strings"
 )
 
@@ -18,8 +20,10 @@ type RouterGroup struct {
 
 type Engine struct {
 	*RouterGroup
-	router *router
-	groups []*RouterGroup // 存储所有分组
+	router        *router
+	groups        []*RouterGroup     // 存储所有分组
+	htmlTemplates *template.Template // 用于 html 渲染
+	funcMap       template.FuncMap
 }
 
 // 初始化 engine
@@ -28,6 +32,16 @@ func New() *Engine {
 	engine.RouterGroup = &RouterGroup{engine: engine}
 	engine.groups = []*RouterGroup{engine.RouterGroup}
 	return engine
+}
+
+// 设置 funcMap
+func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
+	engine.funcMap = funcMap
+}
+
+// 渲染函数
+func (engine *Engine) LoadHTMLGlob(pattern string) {
+	engine.htmlTemplates = template.Must(template.New("").Funcs(engine.funcMap).ParseGlob(pattern))
 }
 
 // 创建分组
@@ -78,7 +92,32 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	}
 
 	c := NewContext(w, req)
+	// 给 ctx 的 engine 赋值
+	c.engine = engine
 	// 将 middleWares 赋值给 Context 中的 handlers
 	c.handlers = middleWares
 	engine.router.handle(c)
+}
+
+// 创建静态文件处理 handler
+func (group *RouterGroup) CreateStaticHandler(relativePath string, fs http.FileSystem) HandlerFunc {
+	absolutePath := path.Join(group.prefix, relativePath)
+	fileServer := http.StripPrefix(absolutePath, http.FileServer(fs))
+	return func(ctx *Context) {
+		file := ctx.Param("filepath")
+		// 判断文件是否存在 or 是否有权限处理文件
+		if _, err := fs.Open(file); err != nil {
+			ctx.Status(http.StatusNotFound)
+			return
+		}
+		fileServer.ServeHTTP(ctx.Writer, ctx.Request)
+	}
+}
+
+// 将硬盘上的 root 路径映射到路由 relativePath 上
+func (group *RouterGroup) Static(relativePath string, root string) {
+	handler := group.CreateStaticHandler(relativePath, http.Dir(root))
+	urlPattern := path.Join(relativePath, "/*filepath")
+	// 注册 handler
+	group.GET(urlPattern, handler)
 }
