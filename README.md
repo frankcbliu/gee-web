@@ -12,4 +12,8 @@
 
 [5. Gee - 中间件（Middleware）](https://mp.weixin.qq.com/s/ld_oaJrhXn1SHZo0tq5x0Q)
 
+[6. Gee - HTML 模板（Template）](https://mp.weixin.qq.com/s/IvleY501iQ_P8M9VL8ym6Q)
+
+[7. Gee - 错误恢复（Panic Recover）](https://mp.weixin.qq.com/s/IbdewxWTgblnlf5mWecOUw)
+
 博客地址：[七天系列：Go 语言动手写 Web 框架](http://szufrank.top/#/./docs/go-web)
